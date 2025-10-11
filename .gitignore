@@ -1,0 +1,51 @@
+# Environment variables
+.env
+.env.local
+
+# Backups
+backups/**/*
+!backups/.gitkeep
+!backups/README.md
+!backups/database/.gitkeep
+!backups/ignition/.gitkeep
+
+# Logs
+config/homepage/logs/
+*.log
+
+# Database dumps
+*.sql.gz
+*.dump
+*.backup
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# Docker volumes data (if mounted locally)
+data/
+volumes/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Node modules (if any Node.js tools are added)
+node_modules/
+package-lock.json
+yarn.lock
+
+# Claude
+.claude

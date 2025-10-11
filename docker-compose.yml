@@ -1,0 +1,531 @@
+x-common: &common
+  logging:
+    driver: json-file
+    options:
+      max-size: '10m'
+      max-file: '3'
+
+services:
+
+  # Ignition Gateway
+  ignition:
+    <<: *common
+    image: inductiveautomation/ignition:${IGNITION_TAG:-8.3.0}
+    container_name: ${IGNITION_CONTAINER_NAME:-mes-ignition-gateway}
+    restart: unless-stopped
+
+    hostname: ${IGNITION_HOSTNAME:-mes-ignition-gateway}
+    networks:
+      - abelara-mes-network
+    ports:
+      - "${IGNITION_HTTP_PORT:-8088}:8088"
+      - "${IGNITION_HTTPS_PORT:-8043}:8043"
+      - "${IGNITION_GAN_PORT:-8060}:8060"
+      
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 4G
+        reservations:
+          cpus: '2'
+          memory: 2G
+
+    environment:
+      - ACCEPT_IGNITION_EULA=Y
+      - TZ=${TZ:-America/Chicago}
+      - GATEWAY_ADMIN_USERNAME=${GATEWAY_ADMIN_USERNAME:-admin}
+      - GATEWAY_ADMIN_PASSWORD=${IGNITION_PASSWORD}
+      - IGNITION_EDITION=${IGNITION_EDITION:-standard}
+      - GATEWAY_MODULES_ENABLED=${GATEWAY_MODULES_ENABLED}
+      - IGNITION_LICENSE_KEY=${IGNITION_LICENSE_KEY}
+      - IGNITION_ACTIVATION_TOKEN=${IGNITION_ACTIVATION_TOKEN}
+      - DISABLE_QUICKSTART=${DISABLE_QUICKSTART:-false}
+      - IGNITION_UID=${IGNITION_UID:-2003}
+      - IGNITION_GID=${IGNITION_GID:-2003}
+      
+    volumes:
+      - ignition-data:/usr/local/bin/ignition/data
+      - ./backups/ignition:/backup:ro
+            
+    # Gateway runtime arguments, then JVM/Wrapper arguments after --
+    command: >
+      -n ${GATEWAY_NAME:-docker-dev-gateway}
+      -m ${GATEWAY_MAX_MEMORY:-2048}
+      --
+      wrapper.java.initmemory=${GATEWAY_INIT_MEMORY:-512}
+      wrapper.java.additional.1=-Dignition.allowunsignedmodules=${ALLOW_UNSIGNED_MODULES:-true}
+      wrapper.java.additional.2=-Djava.awt.headless=true
+      wrapper.java.additional.3=-Dfile.encoding=UTF-8
+
+  # Message Broker - Solace PubSub+
+  solace:
+    <<: *common
+    image: solace/solace-pubsub-standard:${SOLACE_TAG:-latest}
+    container_name: ${SOLACE_CONTAINER_NAME:-mes-solace-broker}
+    hostname: ${SOLACE_HOSTNAME:-mes-solace-broker}
+    restart: unless-stopped
+
+    networks:
+      - abelara-mes-network
+
+    ports:
+      - "${SOLACE_MANAGER_PORT:-8080}:8080"     # PubSub+ Manager / SEMP
+      - "${SOLACE_SMF_PORT:-55555}:55555"       # SMF messaging
+      - "${SOLACE_MQTT_PORT:-1883}:1883"        # MQTT
+      - "${SOLACE_MQTT_WS_PORT:-8000}:8000"     # MQTT over WebSocket
+      - "${SOLACE_AMQP_PORT:-5672}:5672"        # AMQP
+      - "${SOLACE_REST_PORT:-9000}:9000"        # REST
+      - "${SOLACE_SSH_PORT:-2222}:2222"         # SSH CLI
+
+    shm_size: 1g
+    ulimits:
+      core: -1
+      nofile:
+        soft: 2448
+        hard: 1048576
+
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+
+    environment:
+      - username_admin_globalaccesslevel=admin
+      - username_admin_password=${SOLACE_ADMIN_PASSWORD:-admin}
+      - system_scaling_maxconnectioncount=${SOLACE_MAX_CONNECTIONS:-100}
+
+    volumes:
+      - solace-data:/var/lib/solace
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Database
+  timescaledb:
+    <<: *common
+    image: timescale/timescaledb:${TIMESCALEDB_TAG:-latest-pg17}
+    container_name: mes-database
+    restart: unless-stopped
+
+    hostname: mes-database
+    networks:
+      - abelara-mes-network
+    ports:
+      - "5432:5432"
+
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 4G
+        reservations:
+          cpus: '2'
+          memory: 2G
+
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=mes
+      - LANG=en_US.utf8
+      - LC_ALL=en_US.utf8
+
+    volumes:
+      - timescaledb-data:/var/lib/postgresql/data
+      - ./database/creation:/docker-entrypoint-initdb.d:ro
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d mes -h mes-database"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Database Admin - pgAdmin
+  pgadmin:
+    <<: *common
+    image: dpage/pgadmin4:${PGADMIN_TAG:-latest}
+    container_name: mes-pgadmin
+    restart: unless-stopped
+
+    hostname: mes-pgadmin
+    networks:
+      - abelara-mes-network
+    ports:
+      - "${PGADMIN_PORT:-5050}:80"
+
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_DEFAULT_EMAIL}
+      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_DEFAULT_PASSWORD}
+
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+
+  # GraphQL API
+  graphql-api:
+    <<: *common
+    build:
+      context: ./graphql-api
+      dockerfile: Dockerfile
+    container_name: mes-graphql-api
+    restart: unless-stopped
+
+    hostname: mes-graphql-api
+    networks:
+      - abelara-mes-network
+    ports:
+      - "${GRAPHQL_PORT:-4000}:4000"
+
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+    environment:
+      - NODE_ENV=production
+      - PORT=4000
+      - DB_HOST=mes-database
+      - DB_PORT=5432
+      - DB_NAME=mes
+      - DB_USER=${POSTGRES_USER}
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
+      - DB_SCHEMA=mes_core
+      - DB_POOL_MIN=2
+      - DB_POOL_MAX=10
+
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:4000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Historian
+  timebase-historian:
+    <<: *common
+    image: timebase/historian:${HISTORIAN_TAG:-latest}
+    container_name: mes-historian
+    restart: unless-stopped
+
+    hostname: mes-historian
+    networks:
+      - abelara-mes-network
+    ports:
+      - "4511:4511"
+
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+
+    environment:
+      - Settings=/historian/settings
+      - Data=/historian/data
+      - Logs=/historian/logs
+
+    volumes:
+      - historian-data:/historian
+
+  # Historian Collector
+  timebase-collector:
+    <<: *common
+    image: timebase/collector:${COLLECTOR_TAG:-latest}
+    container_name: mes-historian-collector
+    restart: unless-stopped
+
+    hostname: mes-historian-collector
+    networks:
+      - abelara-mes-network
+    ports:
+      - "4521:4521"
+
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+    environment:
+      - Active=false
+      - Settings=/collector/settings
+      - Config=/collector/config
+      - Data=/collector/data
+      - Logs=/collector/logs
+  
+    volumes:
+      - collector-data:/collector
+
+    depends_on:
+      timebase-historian:
+        condition: service_started
+
+  # Historian Explorer
+  timebase-explorer:
+    <<: *common
+    image: timebase/explorer:${EXPLORER_TAG:-latest}
+    container_name: mes-historian-explorer
+    restart: unless-stopped
+
+    hostname: mes-historian-explorer
+    networks:
+      - abelara-mes-network
+    ports:
+      - "4531:4531"
+
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+
+    environment:
+      - Settings=/explorer/settings
+      - Config=/explorer/config
+      - Data=/explorer/data
+      - Logs=/explorer/logs
+
+    volumes:
+      - explorer-data:/explorer
+  
+    depends_on:
+      timebase-historian:
+        condition: service_started
+
+  # Backup Service
+  db-backup:
+    <<: *common
+    image: prodrigestivill/postgres-backup-local:${BACKUP_TAG:-17}
+    container_name: mes-database-backup
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD", "curl", "-s", "http://localhost:8888"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+    hostname: mes-database-backup
+    networks:
+      - abelara-mes-network
+    ports:
+      - "8888:8888"
+
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+
+    environment:
+      TZ: ${TZ}
+      POSTGRES_HOST: mes-database
+      POSTGRES_DB: mes
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      SCHEDULE: "@daily"
+      BACKUP_ON_START: true
+      BACKUP_KEEP_DAYS: ${BACKUP_RETENTION_DAYS}
+      BACKUP_ENCRYPTION_KEY: ${BACKUP_ENCRYPTION_KEY}
+      HEALTHCHECK_PORT: 8888
+      VALIDATE_ON_START: true
+  
+    volumes:
+      - ./backups/database:/backups
+  
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+
+  # Container Update Management
+  watchtower:
+    <<: *common
+    image: containrrr/watchtower:${WATCHTOWER_TAG:-latest}
+    container_name: mes-watchtower
+    restart: unless-stopped
+
+    hostname: mes-watchtower
+    networks:
+      - abelara-mes-network
+
+    ports:
+      - "8070:8080"
+
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+
+    environment:
+      WATCHTOWER_MONITOR_ONLY: true
+      WATCHTOWER_CLEANUP: true
+      WATCHTOWER_INCLUDE_STOPPED: true
+      WATCHTOWER_REVIVE_STOPPED: false
+      WATCHTOWER_LABEL_ENABLE: false
+      WATCHTOWER_HTTP_API_TOKEN: ${WATCHTOWER_API_TOKEN}
+      WATCHTOWER_HTTP_API_UPDATE: false
+      WATCHTOWER_HTTP_API_METRICS: true
+      WATCHTOWER_HTTP_API_PERIODIC_POLLS: true
+      WATCHTOWER_DEBUG: false
+
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+  # Homepage Dashboard
+  homepage:
+    <<: *common
+    image: ghcr.io/gethomepage/homepage:${HOMEPAGE_TAG:-latest}
+    container_name: mes-homepage
+    restart: unless-stopped
+
+    hostname: mes-homepage
+    networks:
+      - abelara-mes-network
+    ports:
+      - "${HOMEPAGE_PORT:-3000}:3000"
+
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+
+    environment:
+      - TZ=${TZ:-America/Chicago}
+      - LOG_LEVEL=debug
+
+    volumes:
+      - ./config/homepage:/app/config
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  # System Monitoring - Glances
+  glances:
+    <<: *common
+    image: nicolargo/glances:${GLANCES_TAG:-latest-full}
+    container_name: mes-glances
+    restart: unless-stopped
+
+    hostname: mes-glances
+    networks:
+      - abelara-mes-network
+    ports:
+      - "${GLANCES_PORT:-61208}:61208"
+
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+
+    environment:
+      - TZ=${TZ:-America/Chicago}
+
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./config/glances/glances.conf:/glances/conf/glances.conf:ro
+      - ./config/glances/start.sh:/start.sh:ro
+
+    command: ["/bin/sh", "/start.sh"]
+
+    depends_on:
+      solace:
+        condition: service_healthy
+
+networks:
+  abelara-mes-network:
+    name: ${NETWORK_NAME:-abelara-mes-network}
+    driver: bridge
+
+volumes:
+  timescaledb-data:
+    name: ${TIMESCALEDB_VOLUME_NAME:-timescaledb-data}
+    labels:
+      - "com.abelara.mes.volume.type=data"
+      - "com.abelara.mes.service=database"
+
+  ignition-data:
+    name: ${IGNITION_VOLUME_NAME:-ignition-data}
+    labels:
+      - "com.abelara.mes.volume.type=data"
+      - "com.abelara.mes.service=ignition"
+
+  solace-data:
+    name: ${SOLACE_VOLUME_NAME:-solace-data}
+    labels:
+      - "com.abelara.mes.volume.type=data"
+      - "com.abelara.mes.service=message-broker"
+
+  pgadmin-data:
+    name: ${PGADMIN_VOLUME_NAME:-pgadmin-data}
+    labels:
+      - "com.abelara.mes.volume.type=data"
+      - "com.abelara.mes.service=pgadmin"
+
+  historian-data:
+    name: ${HISTORIAN_VOLUME_NAME:-historian-data}
+    labels:
+      - "com.abelara.mes.volume.type=data"
+      - "com.abelara.mes.service=historian"
+
+  collector-data:
+    name: ${COLLECTOR_VOLUME_NAME:-collector-data}
+    labels:
+      - "com.abelara.mes.volume.type=data"
+      - "com.abelara.mes.service=collector"
+
+  explorer-data:
+    name: ${EXPLORER_VOLUME_NAME:-explorer-data}
+    labels:
+      - "com.abelara.mes.volume.type=data"
+      - "com.abelara.mes.service=explorer"
+

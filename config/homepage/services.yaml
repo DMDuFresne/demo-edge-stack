@@ -1,0 +1,119 @@
+---
+- Services:
+    - Ignition Gateway:
+        icon: mdi-factory
+        href: http://localhost:8088
+        description: SCADA/IIoT Platform
+        container: mes-ignition-gateway
+
+    - GraphQL API:
+        icon: mdi-graphql
+        href: http://localhost:4000/graphql
+        description: MES Database API with Apollo Studio
+        container: mes-graphql-api
+
+- Historian:
+    - Timebase Historian:
+        icon: mdi-database-clock
+        href: http://localhost:4511
+        description: Time Series Data Storage
+        container: mes-historian
+
+    - Timebase Explorer:
+        icon: mdi-chart-line
+        href: http://localhost:4531
+        description: Time Series Data Explorer
+        container: mes-historian-explorer
+
+    - Timebase Collector:
+        icon: mdi-database-import
+        href: http://localhost:4521
+        description: Data Collection Service
+        container: mes-historian-collector
+
+- Infrastructure:
+    - Solace PubSub+:
+        icon: mdi-message-processing
+        href: http://localhost:8080
+        description: Enterprise Message Broker
+        container: mes-solace-broker
+
+    - TimescaleDB:
+        icon: si-timescale
+        description: Time Series Database
+        container: mes-database
+
+    - pgAdmin:
+        icon: si-postgresql
+        href: http://localhost:5050
+        description: Database Administration
+        container: mes-pgadmin
+
+- Monitoring:
+    - Glances:
+        icon: mdi-monitor-eye
+        href: http://localhost:61208
+        description: System Monitoring
+        container: mes-glances
+
+    - Watchtower:
+        icon: mdi-lighthouse
+        href: http://localhost:8070
+        description: Container Update Monitoring
+        container: mes-watchtower
+
+- Documentation:
+    - Ignition Docs:
+        icon: mdi-book-open-variant
+        href: https://docs.inductiveautomation.com/
+        description: Official Ignition Documentation
+
+    - Timebase Docs:
+        icon: mdi-book-clock
+        href: https://timebase.com/docs/
+        description: Timebase Historian Documentation
+
+    - Solace Docs:
+        icon: mdi-book-multiple
+        href: https://docs.solace.com/
+        description: Solace PubSub+ Documentation
+
+    - PostgreSQL Docs:
+        icon: mdi-database-outline
+        href: https://www.postgresql.org/docs/
+        description: PostgreSQL Database Documentation
+
+    - TimescaleDB Docs:
+        icon: mdi-database-settings
+        href: https://docs.timescale.com/
+        description: TimescaleDB Documentation
+
+    - pgAdmin Docs:
+        icon: mdi-file-document
+        href: https://www.pgadmin.org/docs/
+        description: pgAdmin Documentation
+
+    - Glances Docs:
+        icon: mdi-monitor-eye
+        href: https://nicolargo.github.io/glances/
+        description: Glances System Monitor Docs
+
+    - Watchtower Docs:
+        icon: mdi-lighthouse
+        href: https://containrrr.dev/watchtower/
+        description: Watchtower Documentation
+
+    - Backup Tool Docs:
+        icon: mdi-database-backup
+        href: https://github.com/prodrigestivill/docker-postgres-backup-local
+        description: PostgreSQL Backup Tool Docs
+
+    - Homepage Docs:
+        icon: mdi-home-circle
+        href: https://gethomepage.dev/
+        description: Homepage Dashboard Documentation
+
+    - Docker Compose Docs:
+        icon: si-docker
+        href: https://docs.docker.com/compose/
+        description: Docker Compose Reference

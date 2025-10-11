@@ -1,0 +1,44 @@
+---
+MES Services:
+  - Ignition:
+      - abbr: IG
+        href: https://docs.inductiveautomation.com/
+
+  - Timebase:
+      - abbr: TB
+        href: https://timebase.com/docs/
+
+Infrastructure:
+  - Solace PubSub+:
+      - abbr: SP
+        href: https://docs.solace.com/
+
+  - PostgreSQL:
+      - abbr: PG
+        href: https://www.postgresql.org/docs/
+
+  - TimescaleDB:
+      - abbr: TS
+        href: https://docs.timescale.com/
+
+  - pgAdmin:
+      - abbr: PA
+        href: https://www.pgadmin.org/docs/
+
+Monitoring:
+  - Glances:
+      - abbr: GL
+        href: https://nicolargo.github.io/glances/
+
+  - Watchtower:
+      - abbr: WT
+        href: https://containrrr.dev/watchtower/
+
+General:
+  - Homepage:
+      - abbr: HP
+        href: https://gethomepage.dev/
+
+  - Docker Compose:
+      - abbr: DC
+        href: https://docs.docker.com/compose/

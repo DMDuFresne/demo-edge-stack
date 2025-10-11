@@ -1,0 +1,417 @@
+Project "CI-Based MES Schema" {
+  database_type: "PostgreSQL"
+  note: "CI-Based MES Schema for real-time production logging and continuous improvement. Built with TimescaleDB hypertables, compression, retention, and audit logging."
+}
+
+/* =====================
+   MES AUDIT SCHEMA
+   ===================== */
+
+Table mes_audit.change_log {
+  audit_id bigint [pk, increment]
+  schema_name text [not null]
+  table_name text [not null]
+  operation text [not null, note: 'Expected: INSERT, UPDATE, DELETE']
+  record_key text [not null]
+  record_value text [not null]
+  column_changes jsonb
+  changed_by text
+  changed_at timestamptz
+  session_username text
+  application_name text
+  client_addr inet
+
+  Note: 'TimescaleDB hypertable partitioned by changed_at. Compression enabled with 3-year retention policy.'
+}
+
+/* =====================
+   MES CORE SCHEMA
+   ===================== */
+
+Table mes_core.asset_type {
+  asset_type_id bigint [pk, increment]
+  asset_type_name text [not null]
+  asset_type_description text
+  created_by text
+  created_at timestamptz
+  updated_by text
+  updated_at timestamptz
+  removed boolean [default: false]
+}
+
+Table mes_core.state_type {
+  state_type_id bigint [pk, increment]
+  state_type_name text [not null, unique]
+  state_type_description text
+  state_type_color text [not null, default: '#D5D5D5']
+  is_downtime boolean [default: false]
+  created_by text
+  created_at timestamptz
+  updated_by text
+  updated_at timestamptz
+  removed boolean [default: false]
+}
+
+Table mes_core.state_definition {
+  state_id bigint [pk, increment]
+  state_type_id bigint [not null, ref: > mes_core.state_type.state_type_id]
+  state_name text [not null, unique]
+  state_description text
+  state_color text [not null, default: '#D5D5D5']
+  created_by text
+  created_at timestamptz
+  updated_by text
+  updated_at timestamptz
+  removed boolean [default: false]
+}
+
+Table mes_core.downtime_reason {
+  downtime_reason_id bigint [pk, increment]
+  downtime_reason_code text [not null, unique]
+  downtime_reason_name text [not null]
+  downtime_reason_description text
+  is_planned boolean [default: false]
+  created_by text
+  created_at timestamptz
+  updated_by text
+  updated_at timestamptz
+  removed boolean [default: false]
+}
+
+Table mes_core.count_type {
+  count_type_id bigint [pk, increment]
+  count_type_name text [not null]
+  count_type_description text
+  count_type_unit text [not null]
+  created_by text
+  created_at timestamptz
+  updated_by text
+  updated_at timestamptz
+  removed boolean [default: false]
+}
+
+Table mes_core.measurement_type {
+  measurement_type_id bigint [pk, increment]
+  measurement_type_name text [not null]
+  measurement_type_description text
+  measurement_type_unit text [not null]
+  created_by text
+  created_at timestamptz
+  updated_by text
+  updated_at timestamptz
+  removed boolean [default: false]
+}
+
+Table mes_core.kpi_definition {
+  kpi_id bigint [pk, increment]
+  kpi_name text [not null]
+  kpi_description text
+  kpi_unit text [not null]
+  kpi_formula text
+  created_by text
+  created_at timestamptz
+  updated_by text
+  updated_at timestamptz
+  removed boolean [default: false]
+}
+
+Table mes_core.asset_definition {
+  asset_id bigint [pk, increment]
+  asset_name text [not null]
+  asset_description text [not null]
+  asset_type_id bigint [not null, ref: > mes_core.asset_type.asset_type_id]
+  parent_asset_id bigint [ref: > mes_core.asset_definition.asset_id]
+  tag_path text
+  created_by text
+  created_at timestamptz
+  updated_by text
+  updated_at timestamptz
+  removed boolean [default: false]
+
+  Indexes {
+    parent_asset_id
+  }
+}
+
+Table mes_core.product_family {
+  product_family_id bigint [pk, increment]
+  product_family_name text [not null, unique]
+  product_family_description text
+  created_by text
+  created_at timestamptz
+  updated_by text
+  updated_at timestamptz
+  removed boolean [default: false]
+}
+
+Table mes_core.product_definition {
+  product_id bigint [pk, increment]
+  product_name text [not null]
+  product_description text [not null]
+  product_family_id bigint [ref: > mes_core.product_family.product_family_id]
+  unit_of_measure text [default: 'each']
+  tolerance numeric(5,4) [default: 0]
+  ideal_cycle_time numeric(10,2)
+  created_by text
+  created_at timestamptz
+  updated_by text
+  updated_at timestamptz
+  removed boolean [default: false]
+
+  Indexes {
+    product_family_id
+  }
+}
+
+Table mes_core.performance_target {
+  product_id bigint [not null, ref: > mes_core.product_definition.product_id]
+  asset_id bigint [not null, ref: > mes_core.asset_definition.asset_id]
+  target_value numeric(10,2) [not null]
+  target_unit text
+  created_by text
+  created_at timestamptz
+  updated_by text
+  updated_at timestamptz
+  removed boolean [default: false]
+
+  Indexes {
+    (product_id, asset_id) [pk]
+  }
+}
+
+Table mes_core.state_log {
+  state_log_id bigint [pk, increment]
+  asset_id bigint [not null, ref: > mes_core.asset_definition.asset_id]
+  asset_name text [not null]
+  state_id bigint [not null, ref: > mes_core.state_definition.state_id]
+  state_name text [not null]
+  state_type_id bigint [not null, ref: > mes_core.state_type.state_type_id]
+  state_type_name text [not null]
+  from_state_id bigint
+  additional_info jsonb
+  downtime_reason_id bigint [ref: > mes_core.downtime_reason.downtime_reason_id]
+  downtime_reason_code text
+  downtime_reason_name text
+  logged_by text
+  logged_at timestamptz [not null]
+  updated_by text
+  updated_at timestamptz
+  removed boolean [default: false]
+
+  Indexes {
+    (asset_id, logged_at)
+    downtime_reason_id
+    state_id
+  }
+
+  Note: 'TimescaleDB hypertable partitioned by logged_at. Compression enabled with 3-year retention policy.'
+}
+
+Table mes_core.state_log_note {
+  note_id bigint [pk, increment]
+  state_log_id bigint [not null]
+  note text [not null]
+  created_by text
+  created_at timestamptz [not null]
+  updated_by text
+  updated_at timestamptz
+  removed boolean [default: false]
+
+  Indexes {
+    state_log_id
+  }
+}
+
+Table mes_core.production_log {
+  production_log_id bigint [pk, increment]
+  asset_id bigint [not null, ref: > mes_core.asset_definition.asset_id]
+  asset_name text [not null]
+  product_id bigint [not null, ref: > mes_core.product_definition.product_id]
+  product_name text [not null]
+  product_family_id bigint [not null, ref: > mes_core.product_family.product_family_id]
+  product_family_name text [not null]
+  start_ts timestamptz [not null]
+  end_ts timestamptz
+  additional_info jsonb
+  logged_by text
+  logged_at timestamptz [not null]
+  updated_by text
+  updated_at timestamptz
+  removed boolean [default: false]
+
+  Indexes {
+    (asset_id, start_ts)
+    product_id
+    (asset_id) [unique, note: 'Partial unique index: WHERE end_ts IS NULL AND removed IS DISTINCT FROM TRUE']
+  }
+
+  Note: 'TimescaleDB hypertable partitioned by logged_at. Compression enabled with 3-year retention policy.'
+}
+
+Table mes_core.production_log_note {
+  note_id bigint [pk, increment]
+  production_log_id bigint [not null]
+  note text [not null]
+  created_by text
+  created_at timestamptz [not null]
+  updated_by text
+  updated_at timestamptz
+  removed boolean [default: false]
+
+  Indexes {
+    production_log_id
+  }
+}
+
+Table mes_core.count_log {
+  count_log_id bigint [pk, increment]
+  asset_id bigint [not null, ref: > mes_core.asset_definition.asset_id]
+  asset_name text [not null]
+  production_log_id bigint
+  count_type_id bigint [not null, ref: > mes_core.count_type.count_type_id]
+  count_type_name text [not null]
+  quantity numeric(10,2) [default: 0]
+  product_id bigint [not null, ref: > mes_core.product_definition.product_id]
+  product_name text [not null]
+  product_family_id bigint [not null, ref: > mes_core.product_family.product_family_id]
+  product_family_name text [not null]
+  additional_info jsonb
+  logged_by text
+  logged_at timestamptz [not null]
+  updated_by text
+  updated_at timestamptz
+  removed boolean [default: false]
+
+  Indexes {
+    product_id
+    (production_log_id, logged_at)
+  }
+
+  Note: 'TimescaleDB hypertable partitioned by logged_at. Compression enabled with 3-year retention policy.'
+}
+
+Table mes_core.count_log_note {
+  note_id bigint [pk, increment]
+  count_log_id bigint [not null]
+  note text [not null]
+  created_by text
+  created_at timestamptz [not null]
+  updated_by text
+  updated_at timestamptz
+  removed boolean [default: false]
+
+  Indexes {
+    count_log_id
+  }
+}
+
+Table mes_core.measurement_log {
+  measurement_log_id bigint [pk, increment]
+  asset_id bigint [not null, ref: > mes_core.asset_definition.asset_id]
+  asset_name text [not null]
+  product_id bigint [ref: > mes_core.product_definition.product_id]
+  product_name text
+  product_family_id bigint [not null, ref: > mes_core.product_family.product_family_id]
+  product_family_name text [not null]
+  measurement_type_id bigint [not null, ref: > mes_core.measurement_type.measurement_type_id]
+  measurement_type_name text [not null]
+  target_value numeric(10,2)
+  actual_value numeric(10,2)
+  unit_of_measure text
+  tolerance numeric(5,4) [default: 0]
+  in_tolerance boolean
+  additional_info jsonb
+  logged_by text
+  logged_at timestamptz [not null]
+  updated_by text
+  updated_at timestamptz
+  removed boolean [default: false]
+
+  Indexes {
+    (asset_id, product_id, measurement_type_id, logged_at)
+    (product_id, measurement_type_id)
+  }
+
+  Note: 'TimescaleDB hypertable partitioned by logged_at. Compression enabled with 3-year retention policy.'
+}
+
+Table mes_core.measurement_log_note {
+  note_id bigint [pk, increment]
+  measurement_log_id bigint [not null]
+  note text [not null]
+  created_by text
+  created_at timestamptz [not null]
+  updated_by text
+  updated_at timestamptz
+  removed boolean [default: false]
+
+  Indexes {
+    measurement_log_id
+  }
+}
+
+Table mes_core.kpi_log {
+  kpi_log_id bigint [pk, increment]
+  asset_id bigint [not null, ref: > mes_core.asset_definition.asset_id]
+  asset_name text [not null]
+  kpi_id bigint [not null, ref: > mes_core.kpi_definition.kpi_id]
+  kpi_name text [not null]
+  kpi_value numeric(10,2) [not null]
+  start_ts timestamptz [not null]
+  end_ts timestamptz [not null]
+  additional_info jsonb
+  logged_by text
+  logged_at timestamptz [not null]
+  updated_by text
+  updated_at timestamptz
+  removed boolean [default: false]
+
+  Indexes {
+    (asset_id, kpi_id, start_ts)
+  }
+
+  Note: 'TimescaleDB hypertable partitioned by logged_at. Compression enabled with 3-year retention policy.'
+}
+
+Table mes_core.kpi_log_note {
+  note_id bigint [pk, increment]
+  kpi_log_id bigint [not null]
+  note text [not null]
+  created_by text
+  created_at timestamptz [not null]
+  updated_by text
+  updated_at timestamptz
+  removed boolean [default: false]
+
+  Indexes {
+    kpi_log_id
+  }
+}
+
+Table mes_core.general_note {
+  note_id bigint [pk, increment]
+  note text [not null]
+  created_by text
+  created_at timestamptz [not null]
+  updated_by text
+  updated_at timestamptz
+  removed boolean [default: false]
+}
+
+Table mes_core.schema_version {
+  version text [pk]
+  description text [not null]
+  applied_by text
+  applied_at timestamptz
+}
+
+/* =====================
+   MES CUSTOM SCHEMA
+   ===================== */
+
+Table mes_custom.schema_version {
+  version text [pk]
+  description text [not null]
+  applied_by text
+  applied_at timestamptz
+}
