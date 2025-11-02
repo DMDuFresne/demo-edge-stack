@@ -47,5 +47,17 @@ node_modules/
 package-lock.json
 yarn.lock
 
+# Build outputs
+graphql-api/dist/
+graphql-api/build/
+*.tsbuildinfo
+
+# Test coverage
+graphql-api/coverage/
+.nyc_output/
+
+# Jest cache
+.jest/
+
 # Claude
 .claude

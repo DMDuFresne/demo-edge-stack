@@ -23,7 +23,8 @@ CREATE TABLE asset_definition (
     removed           BOOLEAN DEFAULT FALSE
 );
 
-COMMENT ON TABLE mes_core.asset_definition IS 'Defines an asset in the MES system, including its parent-child hierarchy.';
+COMMENT ON TABLE mes_core.asset_definition IS E'@omit delete
+Defines an asset in the MES system, including its parent-child hierarchy.';
 COMMENT ON COLUMN mes_core.asset_definition.asset_name IS 'Human-readable name of the asset.';
 COMMENT ON COLUMN mes_core.asset_definition.asset_type_id IS 'Reference to the type of the asset.';
 COMMENT ON COLUMN mes_core.asset_definition.parent_asset_id IS 'Reference to the parent asset if part of a hierarchy.';
@@ -58,7 +59,8 @@ CREATE TABLE product_family (
     removed                     BOOLEAN DEFAULT FALSE
 );
 
-COMMENT ON TABLE mes_core.product_family IS 'Groups related products into families for reporting or planning.';
+COMMENT ON TABLE mes_core.product_family IS E'@omit delete
+Groups related products into families for reporting or planning.';
 COMMENT ON COLUMN mes_core.product_family.product_family_name IS 'Name of the product family.';
 
 CREATE TRIGGER trg_product_family_updated_at
@@ -92,7 +94,8 @@ CREATE TABLE product_definition (
     removed              BOOLEAN DEFAULT FALSE
 );
 
-COMMENT ON TABLE mes_core.product_definition IS 'Defines individual products manufactured or processed.';
+COMMENT ON TABLE mes_core.product_definition IS E'@omit delete
+Defines individual products manufactured or processed.';
 COMMENT ON COLUMN mes_core.product_definition.product_name IS 'Name of the product.';
 COMMENT ON COLUMN mes_core.product_definition.product_family_id IS 'Reference to the associated product family.';
 COMMENT ON COLUMN mes_core.product_definition.ideal_cycle_time IS 'Target ideal cycle time (seconds) for the product.';
@@ -129,7 +132,8 @@ CREATE TABLE performance_target (
     PRIMARY KEY (product_id, asset_id)
 );
 
-COMMENT ON TABLE mes_core.performance_target IS 'Defines expected performance metrics for a given asset and product.';
+COMMENT ON TABLE mes_core.performance_target IS E'@omit delete
+Defines expected performance metrics for a given asset and product.';
 COMMENT ON COLUMN mes_core.performance_target.asset_id IS 'Reference to the asset for the target.';
 COMMENT ON COLUMN mes_core.performance_target.product_id IS 'Reference to the product for the target.';
 COMMENT ON COLUMN mes_core.performance_target.target_value IS 'Expected ideal production rate (units/hour).';

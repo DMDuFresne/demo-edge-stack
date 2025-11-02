@@ -20,7 +20,8 @@ CREATE TABLE asset_type (
     removed                 BOOLEAN DEFAULT FALSE
 );
 
-COMMENT ON TABLE mes_core.asset_type IS 'Defines categories of assets (e.g., machine, line, cell).';
+COMMENT ON TABLE mes_core.asset_type IS E'@omit delete
+Defines categories of assets (e.g., machine, line, cell).';
 COMMENT ON COLUMN mes_core.asset_type.asset_type_name IS 'Human-readable name of the asset type.';
 
 CREATE TRIGGER trg_asset_type_updated_at
@@ -52,7 +53,8 @@ CREATE TABLE state_type (
     removed                  BOOLEAN DEFAULT FALSE
 );
 
-COMMENT ON TABLE state_type IS 'Defines operational states such as Running, Down, Idle.';
+COMMENT ON TABLE state_type IS E'@omit delete
+Defines operational states such as Running, Down, Idle.';
 
 CREATE TRIGGER trg_state_type_updated_at
 BEFORE UPDATE ON mes_core.state_type
@@ -83,7 +85,8 @@ CREATE TABLE state_definition (
     removed             BOOLEAN DEFAULT FALSE
 );
 
-COMMENT ON TABLE state_definition IS 'Defines specific machine states mapped to state types.';
+COMMENT ON TABLE state_definition IS E'@omit delete
+Defines specific machine states mapped to state types.';
 
 CREATE TRIGGER trg_state_definition_updated_at
 BEFORE UPDATE ON mes_core.state_definition
@@ -114,7 +117,8 @@ CREATE TABLE downtime_reason (
     removed                       BOOLEAN DEFAULT FALSE
 );
 
-COMMENT ON TABLE mes_core.downtime_reason IS 'Defines reasons for asset downtime (planned or unplanned).';
+COMMENT ON TABLE mes_core.downtime_reason IS E'@omit delete
+Defines reasons for asset downtime (planned or unplanned).';
 COMMENT ON COLUMN mes_core.downtime_reason.downtime_reason_name IS 'Name of the downtime reason.';
 COMMENT ON COLUMN mes_core.downtime_reason.is_planned IS 'Indicates if the downtime reason is considered planned.';
 
@@ -146,7 +150,8 @@ CREATE TABLE count_type (
     removed                 BOOLEAN DEFAULT FALSE
 );
 
-COMMENT ON TABLE mes_core.count_type IS 'Defines types of quantity counts logged against assets (e.g., good, scrap).';
+COMMENT ON TABLE mes_core.count_type IS E'@omit delete
+Defines types of quantity counts logged against assets (e.g., good, scrap).';
 COMMENT ON COLUMN mes_core.count_type.count_type_name IS 'Name of the count type.';
 
 CREATE TRIGGER trg_count_type_updated_at
@@ -177,7 +182,8 @@ CREATE TABLE measurement_type (
     removed                       BOOLEAN DEFAULT FALSE
 );
 
-COMMENT ON TABLE mes_core.measurement_type IS 'Defines types of measurements (e.g., weight, length, pressure).';
+COMMENT ON TABLE mes_core.measurement_type IS E'@omit delete
+Defines types of measurements (e.g., weight, length, pressure).';
 COMMENT ON COLUMN mes_core.measurement_type.measurement_type_name IS 'Name of the measurement type.';
 
 
@@ -210,7 +216,8 @@ CREATE TABLE kpi_definition (
     removed          BOOLEAN DEFAULT FALSE
 );
 
-COMMENT ON TABLE mes_core.kpi_definition IS 'Defines key performance indicators (KPIs) that can be logged for assets.';
+COMMENT ON TABLE mes_core.kpi_definition IS E'@omit delete
+Defines key performance indicators (KPIs) that can be logged for assets.';
 COMMENT ON COLUMN mes_core.kpi_definition.kpi_name IS 'Name of the KPI being measured.';
 
 CREATE TRIGGER trg_kpi_definition_updated_at

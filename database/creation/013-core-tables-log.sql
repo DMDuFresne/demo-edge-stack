@@ -30,7 +30,8 @@ CREATE TABLE state_log (
 );
 
 -- State Log Comments
-COMMENT ON TABLE mes_core.state_log IS 'Logs asset state transitions, tracking the state type and time.';
+COMMENT ON TABLE mes_core.state_log IS E'@omit delete
+Logs asset state transitions, tracking the state type and time. Immutable log - records cannot be deleted via GraphQL API (use soft delete with removed=true).';
 COMMENT ON COLUMN mes_core.state_log.state_log_id IS 'Surrogate identity for the state_log record.';
 COMMENT ON COLUMN mes_core.state_log.asset_id IS 'Reference to the asset experiencing a state transition.';
 COMMENT ON COLUMN mes_core.state_log.asset_name IS 'Snapshot of the asset name at time of state change.';
@@ -140,6 +141,9 @@ CREATE TABLE state_log_note (
     removed       BOOLEAN DEFAULT FALSE
 );
 
+COMMENT ON TABLE mes_core.state_log_note IS E'@omit delete
+Notes linked to state log entries. Can be created, read, and updated via GraphQL API. Use soft delete (set removed=true) instead of hard delete.';
+
 CREATE INDEX idx_state_log_note_state_log_id
 ON mes_core.state_log_note(state_log_id);
 
@@ -183,7 +187,8 @@ CREATE TABLE production_log (
 );
 
 -- Production Log Comments
-COMMENT ON TABLE mes_core.production_log IS 'Logs production runs, tracking start and end times for assets.';
+COMMENT ON TABLE mes_core.production_log IS E'@omit delete
+Logs production runs, tracking start and end times for assets. Records can be updated but not deleted via GraphQL API (use soft delete with removed=true).';
 COMMENT ON COLUMN mes_core.production_log.production_log_id IS 'Surrogate identity for the production_log record.';
 COMMENT ON COLUMN mes_core.production_log.asset_id IS 'Reference to the asset executing the production run.';
 COMMENT ON COLUMN mes_core.production_log.asset_name IS 'Snapshot of the asset name at the time of production.';
@@ -261,6 +266,9 @@ CREATE TABLE production_log_note (
     removed            BOOLEAN DEFAULT FALSE
 );
 
+COMMENT ON TABLE mes_core.production_log_note IS E'@omit delete
+Notes linked to production log entries. Can be created, read, and updated via GraphQL API. Use soft delete (set removed=true) instead of hard delete.';
+
 CREATE INDEX idx_production_log_note_production_log_id
 ON mes_core.production_log_note(production_log_id);
 
@@ -306,7 +314,8 @@ CREATE TABLE count_log (
 );
 
 -- Count Log Comments
-COMMENT ON TABLE mes_core.count_log IS 'Logs quantity counts for assets, such as infeed, outfeed, and scrap.';
+COMMENT ON TABLE mes_core.count_log IS E'@omit delete
+Logs quantity counts for assets, such as infeed, outfeed, and scrap. Records can be updated but not deleted via GraphQL API (use soft delete with removed=true).';
 COMMENT ON COLUMN mes_core.count_log.count_log_id IS 'Surrogate identity for the count_log record.';
 COMMENT ON COLUMN mes_core.count_log.asset_id IS 'Reference to the asset that logged the count event.';
 COMMENT ON COLUMN mes_core.count_log.asset_name IS 'Snapshot of the asset name at time of count.';
@@ -393,6 +402,9 @@ CREATE TABLE count_log_note (
     removed        BOOLEAN DEFAULT FALSE
 );
 
+COMMENT ON TABLE mes_core.count_log_note IS E'@omit delete
+Notes linked to count log entries. Can be created, read, and updated via GraphQL API. Use soft delete (set removed=true) instead of hard delete.';
+
 CREATE INDEX idx_count_log_note_count_log_id
 ON mes_core.count_log_note(count_log_id);
 
@@ -441,7 +453,8 @@ CREATE TABLE measurement_log (
 );
 
 -- Measurement Log Comments
-COMMENT ON TABLE mes_core.measurement_log IS 'Logs measurements or inspections for produced items.';
+COMMENT ON TABLE mes_core.measurement_log IS E'@omit delete
+Logs measurements or inspections for produced items. Records can be updated but not deleted via GraphQL API (use soft delete with removed=true).';
 COMMENT ON COLUMN mes_core.measurement_log.measurement_log_id IS 'Surrogate identity for the measurement_log record.';
 COMMENT ON COLUMN mes_core.measurement_log.asset_id IS 'Reference to the asset where the measurement occurred.';
 COMMENT ON COLUMN mes_core.measurement_log.asset_name IS 'Snapshot of the asset name at the time of measurement.';
@@ -528,6 +541,9 @@ CREATE TABLE measurement_log_note (
     removed         BOOLEAN DEFAULT FALSE
 );
 
+COMMENT ON TABLE mes_core.measurement_log_note IS E'@omit delete
+Notes linked to measurement log entries. Can be created, read, and updated via GraphQL API. Use soft delete (set removed=true) instead of hard delete.';
+
 CREATE INDEX idx_measurement_log_note_measurement_log_id
 ON mes_core.measurement_log_note(measurement_log_id);
 
@@ -570,7 +586,8 @@ CREATE TABLE kpi_log (
 );
 
 -- KPI Log Comments
-COMMENT ON TABLE mes_core.kpi_log IS 'Logs calculated key performance indicators (KPIs) over time for assets.';
+COMMENT ON TABLE mes_core.kpi_log IS E'@omit delete
+Logs calculated key performance indicators (KPIs) over time for assets. Records can be updated but not deleted via GraphQL API (use soft delete with removed=true).';
 COMMENT ON COLUMN mes_core.kpi_log.kpi_log_id IS 'Surrogate identity for the kpi_log record.';
 COMMENT ON COLUMN mes_core.kpi_log.asset_id IS 'Reference to the asset the KPI applies to.';
 COMMENT ON COLUMN mes_core.kpi_log.asset_name IS 'Snapshot of the asset name for the KPI record.';
@@ -637,6 +654,9 @@ CREATE TABLE kpi_log_note (
     removed      BOOLEAN DEFAULT FALSE
 );
 
+COMMENT ON TABLE mes_core.kpi_log_note IS E'@omit delete
+Notes linked to KPI log entries. Can be created, read, and updated via GraphQL API. Use soft delete (set removed=true) instead of hard delete.';
+
 CREATE INDEX idx_kpi_log_note_kpi_log_id
 ON mes_core.kpi_log_note(kpi_log_id);
 
@@ -670,6 +690,9 @@ CREATE TABLE general_note (
     updated_at  TIMESTAMPTZ,
     removed     BOOLEAN DEFAULT FALSE
 );
+
+COMMENT ON TABLE mes_core.general_note IS E'@omit delete
+Standalone notes not linked to specific logs. Can be created, read, and updated via GraphQL API. Use soft delete (set removed=true) instead of hard delete.';
 
 CREATE TRIGGER trg_general_note_updated_at
 BEFORE UPDATE ON general_note
